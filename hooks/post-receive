@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+function print_message {
+	printf "\e[${1}m${2}\e[0m\n"
+}
+
+function error_exit {
+	local messages=(
+		"Deployment failed"
+		"Build failed"
+	)
+
+	print_message 31 "${messages[${1}]}"
+	exit 1
+}
+
+trap "error_exit 0" ERR
+read clear push branch
+
+branch="${branch##*/}"
+push_id="${branch}-${push}"
+root_dir="$(dirname "${PWD}")"
+work_tree="${root_dir}/${push_id}"
+
+mkdir -m 775 "${work_tree}"
+git --work-tree="${work_tree}" checkout -f
+
+if [[ -x "${work_tree}/build.sh" ]]; then
+	export GIT_DEPLOY_BRANCH="${branch}"
+	export GIT_DEPLOY_WORK_TREE="${work_tree}"
+	export GIT_DEPLOY_ENVIRONMENT="${root_dir##*/}"
+
+	print_message 33 "Starting build process"
+	trap "error_exit 1" ERR
+	"${work_tree}/build.sh"
+fi
+
+trap "error_exit 0" ERR
+ln -snf "${work_tree}" "${root_dir}/${branch}"
+
+if [[ -n "${clear}" ]]; then
+	clear_id="${branch}-${clear}"
+	clear_work_tree="${root_dir}/${clear_id}"
+
+	if [[ -d "${clear_work_tree}" ]]; then
+		rm -rf "${clear_work_tree}"
+	fi
+fi
+
+print_message 32 "Deployment completed"
+exit 0

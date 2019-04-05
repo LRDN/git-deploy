@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+function print_message {
+	printf "\e[${1}m${2}\e[0m\n"
+}
+
+read clear push branch
+
+if [[ "$(git symbolic-ref HEAD)" != "${branch}" ]]; then
+	print_message 33 "Switching to branch '${branch##*/}'"
+	git symbolic-ref HEAD "${branch}"
+fi
+
+exit 0

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+# Git Deployment Hooks 1.0.0
+# https://github.com/lrdn/git-deploy
+#
+# Copyright (c) 2019 LRDN <git@lrdn.net>
+# Released under the MIT license
+
+function print_message {
+	printf "\e[${1}m${2}\e[0m\n"
+}
+
+function error_exit {
+	local messages=(
+		"Failed to access source in ${2}"
+		"Failed to configure remote in ${2}"
+	)
+
+	print_message 31 "${messages[${1}]}"
+	exit 1
+}
+
+remote="${1}"
+url="${2%/}"
+
+if [[ -z "${remote}" || -z "${url}" ]]; then
+	print_message 33 "Usage: git deploy <remote> <url>"
+	exit 1
+fi
+
+trap "error_exit 0 \"${PWD}/.git\"" ERR
+git rev-parse --git-dir > /dev/null 2>&1
+trap "error_exit 1 \"${url}/${remote}/.git-deploy\"" ERR
+
+if [[ "${url}" =~ ^ssh://([^:]+):?([0-9]+)?(/.*)? ]]; then
+	ssh_host="${BASH_REMATCH[1]}"
+	ssh_port="${BASH_REMATCH[2]}"
+	ssh_path="${BASH_REMATCH[3]}"
+
+	if [[ -n "${ssh_port}" ]]; then
+		ssh_port="-oPort=${ssh_port}"
+	fi
+
+	if [[ -z "${SSH_AUTH_SOCK}" ]]; then
+		trap "ssh-agent -k > /dev/null 2>&1" EXIT
+		eval $(ssh-agent) && ssh-add
+	fi
+
+	ssh ${ssh_port} ${ssh_host} "git init --bare \"${ssh_path}/${remote}/.git-deploy\""
+	scp ${ssh_port} /usr/local/share/git-deploy/hooks/post-receive "${ssh_host}:${ssh_path}/${remote}/.git-deploy/hooks/post-receive"
+	scp ${ssh_port} /usr/local/share/git-deploy/hooks/pre-receive "${ssh_host}:${ssh_path}/${remote}/.git-deploy/hooks/pre-receive"
+	ssh ${ssh_port} ${ssh_host} "chmod +x \"${ssh_path}/${remote}/.git-deploy/hooks/post-receive\""
+	ssh ${ssh_port} ${ssh_host} "chmod +x \"${ssh_path}/${remote}/.git-deploy/hooks/pre-receive\""
+else
+	git init --bare "${url}/${remote}/.git-deploy"
+	cp /usr/local/share/git-deploy/hooks/post-receive "${url}/${remote}/.git-deploy/hooks/post-receive"
+	cp /usr/local/share/git-deploy/hooks/pre-receive "${url}/${remote}/.git-deploy/hooks/pre-receive"
+	chmod +x "${url}/${remote}/.git-deploy/hooks/post-receive"
+	chmod +x "${url}/${remote}/.git-deploy/hooks/pre-receive"
+fi
+
+trap "error_exit 1 \"${PWD}/.git\"" ERR
+
+if [[ -z "$(git config --get "remote.${remote}.url")" ]]; then
+	git remote add "${remote}" "${url}/${remote}/.git-deploy"
+fi
+
+if [[ -n "$(git config --get "remote.${remote}.pushurl" "^${url}/${remote}/.git-deploy$")" ]]; then
+	git remote set-url --delete --push "${remote}" "${url}/${remote}/.git-deploy"
+fi
+
+git remote set-url --add --push "${remote}" "${url}/${remote}/.git-deploy"
+print_message 32 "Remote configured in ${url}/${remote}/.git-deploy"
+exit 0
