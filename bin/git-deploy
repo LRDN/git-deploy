@@ -6,11 +6,11 @@
 # Copyright (c) 2019 LRDN <git@lrdn.net>
 # Released under the MIT license
 
-function print_message {
+function print_message() {
 	printf "\e[${1}m${2}\e[0m\n"
 }
 
-function error_exit {
+function error_exit() {
 	local messages=(
 		"Failed to access source in ${2}"
 		"Failed to configure remote in ${2}"

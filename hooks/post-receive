@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-function print_message {
+function print_message() {
 	printf "\e[${1}m${2}\e[0m\n"
 }
 
-function error_exit {
+function error_exit() {
 	local messages=(
 		"Deployment failed"
 		"Build failed"
