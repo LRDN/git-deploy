@@ -26,6 +26,7 @@ mkdir -m 775 "${work_tree}"
 git --work-tree="${work_tree}" checkout -f
 
 if [[ -x "${work_tree}/build.sh" ]]; then
+	export GIT_DEPLOY_ID="${push}"
 	export GIT_DEPLOY_BRANCH="${branch}"
 	export GIT_DEPLOY_WORK_TREE="${work_tree}"
 	export GIT_DEPLOY_ENVIRONMENT="${root_dir##*/}"

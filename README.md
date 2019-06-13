@@ -59,6 +59,7 @@ The deployment process can automatically perform build tasks by including a ``bu
 ```sh
 #!/usr/bin/env bash
 
+echo "GIT_DEPLOY_ID=${GIT_DEPLOY_ID}"
 echo "GIT_DEPLOY_BRANCH=${GIT_DEPLOY_BRANCH}"
 echo "GIT_DEPLOY_WORK_TREE=${GIT_DEPLOY_WORK_TREE}"
 echo "GIT_DEPLOY_ENVIRONMENT=${GIT_DEPLOY_ENVIRONMENT}"
